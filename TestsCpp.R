@@ -170,7 +170,18 @@ cat("fit path test 2 passed\n\n")
 
 # Do microbenchmark on fitLASSOstandardized_seq vs fitLASSOstandardized_seq_c
 ######################################################################
-
+cat("=== Microbenchmark: lambda path (R vs C++) ===\n")
+mb_path <- microbenchmark(
+  R_seq = {
+    tmp <- fitLASSOstandardized_seq(std5$Xtilde, std5$Ytilde, lambda_seq = lambda_seq5, eps = 1e-6)
+    if (is.list(tmp)) tmp <- tmp$beta_mat
+  },
+  Cpp_seq = {
+    tmp <- fitLASSOstandardized_seq_c(std5$Xtilde, std5$Ytilde, lambda_seq5, eps = 1e-6)
+  },
+  times = 10L
+)
+print(mb_path); cat("\n")
 # Tests on riboflavin data
 ##########################
 require(hdi) # this should install hdi package if you don't have it already; otherwise library(hdi)
@@ -184,8 +195,29 @@ out <- standardizeXY(riboflavin$x, riboflavin$y)
 
 # This is just to create lambda_seq, can be done faster, but this is simpler
 outl <- fitLASSOstandardized_seq(out$Xtilde, out$Ytilde, n_lambda = 30)
+lambda_seq <- outl$lambda_seq
 
 # The code below should assess your speed improvement on riboflavin data
+t_cpp <- system.time({
+  B_cpp <- fitLASSOstandardized_seq_c(out$Xtilde, out$Ytilde, lambda_seq, eps = 1e-6)
+})
+t_r <- system.time({
+  out_r <- fitLASSOstandardized_seq(out$Xtilde, out$Ytilde, lambda_seq, eps = 1e-6)
+  B_r <- if (is.list(out_r)) out_r$beta_mat else out_r
+})
+
+cat("\n===== Riboflavin speed (30 lambdas) =====\n")
+cat(sprintf("C++ time:  %.3f sec (user)\n", t_cpp[1]))
+cat(sprintf("R   time:  %.3f sec (user)\n", t_r[1]))
+cat(sprintf("Speedup:   %.2fx\n", t_r[1] / t_cpp[1]))
+
+stopifnot(identical(dim(B_cpp), dim(B_r)))
+cat(sprintf("Path max |diff| = %.3e\n", max(abs(B_cpp - B_r))))
+
+l1_cpp <- colSums(abs(B_cpp))
+stopifnot(all(diff(l1_cpp) >= -1e-8))
+cat("L1 norm monotonicity check: passed\n")
+
 microbenchmark(
   fitLASSOstandardized_seq(out$Xtilde, out$Ytilde, outl$lambda_seq),
   fitLASSOstandardized_seq_c(out$Xtilde, out$Ytilde, outl$lambda_seq),
