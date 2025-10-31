@@ -73,6 +73,39 @@ cat("lasso objective test 2 passed\n\n")
 
 # Do at least 2 tests for fitLASSOstandardized function below. You are checking output agreements on at least 2 separate inputs
 #################################################
+cat("=== Tests: fitLASSOstandardized (single lambda) ===\n")
+## Test 1: random data, zero start
+set.seed(3)
+n <- 200; p <- 50
+X3 <- matrix(rnorm(n*p), n, p)
+beta_true <- c(rep(2,5), rep(0, p-5))
+y3 <- drop(X3 %*% beta_true + rnorm(n, sd = 0.5))
+std3 <- stdXY(X3, y3)
+lam3 <- 0.3
+b0   <- rep(0, p)
+
+fitR3 <- fitLASSOstandardized(std3$Xtilde, std3$Ytilde, lam3, beta_start = b0, eps = 1e-8)
+if (is.list(fitR3)) fitR3 <- fitR3$beta
+fitC3 <- fitLASSOstandardized_c(std3$Xtilde, std3$Ytilde, lam3, beta_start = b0, eps = 1e-8)
+
+stopifnot(max(abs(as.numeric(fitR3) - as.numeric(fitC3))) < 1e-6)
+cat("fit single-lambda test 1 passed\n")
+
+
+## Test 2: random data, nonzero warm start
+set.seed(33)
+X4 <- matrix(rnorm(150*30), 150, 30)
+y4 <- rnorm(150)
+std4 <- stdXY(X4, y4)
+lam4 <- 0.15
+bstart4 <- rnorm(30, sd = 0.1)
+
+fitR4 <- fitLASSOstandardized(std4$Xtilde, std4$Ytilde, lam4, beta_start = bstart4, eps = 1e-8)
+if (is.list(fitR4)) fitR4 <- fitR4$beta
+fitC4 <- fitLASSOstandardized_c(std4$Xtilde, std4$Ytilde, lam4, beta_start = bstart4, eps = 1e-8)
+
+stopifnot(max(abs(as.numeric(fitR4) - as.numeric(fitC4))) < 1e-6)
+cat("fit single-lambda test 2 passed\n")
 
 # Do microbenchmark on fitLASSOstandardized vs fitLASSOstandardized_c
 ######################################################################
