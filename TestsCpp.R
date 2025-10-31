@@ -40,6 +40,35 @@ cat("soft test 2 passed\n\n")
 
 # Do at least 2 tests for lasso objective function below. You are checking output agreements on at least 2 separate inputs
 #################################################
+cat("=== Tests: lasso / lasso_c (objective) ===\n")
+## Helper: use the same standardization as HW4
+stdXY <- function(X, Y) {
+  out <- standardizeXY(X, Y)
+  list(Xtilde = out$Xtilde, Ytilde = out$Ytilde)
+}
+
+## Test 1: small reproducible data
+X1 <- matrix(c(1,2,3, 0,1,0, 1,0,1, 0,0,1, 2,1,0), nrow=5, byrow=TRUE)
+y1 <- c(1,0,2,0,1)
+std1 <- stdXY(X1, y1)
+beta1 <- c(0.1, -0.2, 0.3)
+lam1  <- 0.4
+obj_R1 <- lasso(std1$Xtilde, std1$Ytilde, beta1, lam1)
+obj_C1 <- lasso_c(std1$Xtilde, std1$Ytilde, beta1, lam1)
+stopifnot(aeq(obj_R1, obj_C1))
+cat("lasso objective test 1 passed\n")
+
+## Test 2: random tall data
+set.seed(2)
+X2 <- matrix(rnorm(300*20), 300, 20)
+y2 <- rnorm(300)
+std2 <- stdXY(X2, y2)
+beta2 <- rnorm(20)
+lam2  <- 0.25
+obj_R2 <- lasso(std2$Xtilde, std2$Ytilde, beta2, lam2)
+obj_C2 <- lasso_c(std2$Xtilde, std2$Ytilde, beta2, lam2)
+stopifnot(aeq(obj_R2, obj_C2))
+cat("lasso objective test 2 passed\n\n")
 
 
 # Do at least 2 tests for fitLASSOstandardized function below. You are checking output agreements on at least 2 separate inputs
