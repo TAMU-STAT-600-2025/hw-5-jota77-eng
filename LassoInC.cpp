@@ -20,48 +20,62 @@ double lasso_c(const arma::mat& Xtilde, const arma::colvec& Ytilde, const arma::
 
 // Lasso coordinate-descent on standardized data with one lamdba. Returns a vector beta.
 // [[Rcpp::export]]
-arma::colvec fitLASSOstandardized_c(const arma::mat& Xtilde, const arma::colvec& Ytilde, double lambda, const arma::colvec& beta_start, double eps = 0.001){const int n = static_cast<int>(Xtilde.n_rows);
+// Lasso coordinate-descent on standardized data with one lamdba. Returns a vector beta.
+// [[Rcpp::export]]
+arma::colvec fitLASSOstandardized_c(const arma::mat& Xtilde,
+                                    const arma::colvec& Ytilde,
+                                    double lambda,
+                                    const arma::colvec& beta_start,
+                                    double eps = 0.001) {
   const int p = static_cast<int>(Xtilde.n_cols);
-  const int max_iter = 10000; 
+  const int max_iter = 10000;
   
   arma::colvec beta = beta_start;
   if ((int)beta.n_elem != p) {
     beta.set_size(p);
     beta.zeros();
   }
-  arma::rowvec xtx = arma::sum(arma::square(Xtilde), 0); // 1 x p
-  arma::colvec r = Ytilde - Xtilde * beta;
+  
+  const double n = static_cast<double>(Xtilde.n_rows);
+  arma::colvec xtx = arma::sum(arma::square(Xtilde), 0).t();  // p x 1
+  arma::colvec r   = Ytilde - Xtilde * beta;                  // residual
+  
+  //  (1/(2n)) * ||r||^2 + lambda * ||beta||_1
+  auto obj = [&](const arma::colvec& rr, const arma::colvec& b)->double {
+    return 0.5 * arma::dot(rr, rr) / n + lambda * arma::norm(b, 1);
+  };
+  
+  double f_prev = obj(r, beta);
   
   for (int it = 0; it < max_iter; ++it) {
-    double max_delta = 0.0;
-    
+    // 
     for (int j = 0; j < p; ++j) {
-      const double bj_old = beta[j];
-      const double xtxj  = xtx[j];
+      const double xtxj = xtx[j];
+      if (xtxj == 0.0) continue;                 // 
       
-      // rho_j = x_j^T (r + x_j * b_old)
       const arma::colvec xj = Xtilde.col(j);
-      const double rho_j = arma::dot(xj, r) + xtxj * bj_old;
+      // rho_j = x_j^T r + (x_j^T x_j) * b_j
+      const double rho_j = arma::dot(xj, r) + xtxj * beta[j];
       
-      // S(rho_j, n*lambda) / (x_j^T x_j)
-      const double bj_new = soft_c(rho_j, static_cast<double>(n) * lambda) / xtxj;
+      // soft(rho_j, n*lambda) / (x_j^T x_j)
+      const double bj_new = soft_c(rho_j, n * lambda) / xtxj;
       
-      const double db = bj_new - bj_old;
+      const double db = bj_new - beta[j];
       if (db != 0.0) {
-        // r <- r - x_j * (b_new - b_old)
-        r -= xj * db;
+        r   -= xj * db;      // 
         beta[j] = bj_new;
-        const double ad = std::abs(db);
-        if (ad > max_delta) max_delta = ad;
       }
     }
     
-    if (max_delta < eps) break;
+    // 
+    const double f_new = obj(r, beta);
+    if ((f_prev - f_new) < eps) break;
+    f_prev = f_new;
   }
   
   return beta;
-  // Your function code goes here
-}  
+}
+
 
 // Lasso coordinate-descent on standardized data with supplied lambda_seq. 
 // You can assume that the supplied lambda_seq is already sorted from largest to smallest, and has no negative values.
