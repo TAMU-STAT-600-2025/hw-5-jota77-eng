@@ -132,6 +132,41 @@ print(mb_single); cat("\n")
 
 # Do at least 2 tests for fitLASSOstandardized_seq function below. You are checking output agreements on at least 2 separate inputs
 #################################################
+cat("=== Tests: fitLASSOstandardized_seq (path) ===\n")
+lambda_max_fun <- function(Xtilde, Ytilde) {
+  n <- nrow(Xtilde)
+  max(abs(drop(crossprod(Xtilde, Ytilde)))/n)
+}
+
+## Test 1: equality of the whole path
+set.seed(4)
+n5 <- 250; p5 <- 60
+X5 <- matrix(rnorm(n5*p5), n5, p5)
+y5 <- rnorm(n5)
+std5 <- stdXY(X5, y5)
+lam_max5 <- lambda_max_fun(std5$Xtilde, std5$Ytilde)
+lambda_seq5 <- seq(lam_max5, lam_max5*0.05, length.out = 25)
+
+BR5 <- fitLASSOstandardized_seq(std5$Xtilde, std5$Ytilde, lambda_seq = lambda_seq5, eps = 1e-6)
+B_R5 <- if (is.list(BR5)) BR5$beta_mat else BR5
+B_C5 <- fitLASSOstandardized_seq_c(std5$Xtilde, std5$Ytilde, lambda_seq5, eps = 1e-6)
+stopifnot(dim(B_R5) == dim(B_C5), aeq(B_R5, B_C5, tol = 1e-6))
+cat("fit path test 1 passed\n")
+
+## Test 2: another dimension + random
+set.seed(44)
+n6 <- 120; p6 <- 25
+X6 <- matrix(rnorm(n6*p6), n6, p6)
+y6 <- rnorm(n6)
+std6 <- stdXY(X6, y6)
+lam_max6 <- lambda_max_fun(std6$Xtilde, std6$Ytilde)
+lambda_seq6 <- seq(lam_max6, lam_max6*0.1, length.out = 15)
+
+BR6 <- fitLASSOstandardized_seq(std6$Xtilde, std6$Ytilde, lambda_seq = lambda_seq6, eps = 1e-6)
+B_R6 <- if (is.list(BR6)) BR6$beta_mat else BR6
+B_C6 <- fitLASSOstandardized_seq_c(std6$Xtilde, std6$Ytilde, lambda_seq6, eps = 1e-6)
+stopifnot(dim(B_R6) == dim(B_C6), aeq(B_R6, B_C6, tol = 1e-6))
+cat("fit path test 2 passed\n\n")
 
 # Do microbenchmark on fitLASSOstandardized_seq vs fitLASSOstandardized_seq_c
 ######################################################################
