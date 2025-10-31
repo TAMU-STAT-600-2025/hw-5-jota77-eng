@@ -109,6 +109,26 @@ cat("fit single-lambda test 2 passed\n")
 
 # Do microbenchmark on fitLASSOstandardized vs fitLASSOstandardized_c
 ######################################################################
+cat("=== Microbenchmark: single lambda (R vs C++) ===\n")
+set.seed(10)
+nmb <- 1000; pmb <- 200
+Xmb <- matrix(rnorm(nmb*pmb), nmb, pmb)
+ymb <- rnorm(nmb)
+stdmb <- stdXY(Xmb, ymb)
+lam_mb <- 0.15
+b0mb <- rep(0, pmb)
+
+mb_single <- microbenchmark(
+  R_single = {
+    tmp <- fitLASSOstandardized(stdmb$Xtilde, stdmb$Ytilde, lam_mb, beta_start = b0mb, eps = 1e-6)
+    if (is.list(tmp)) tmp <- tmp$beta
+  },
+  Cpp_single = {
+    tmp <- fitLASSOstandardized_c(stdmb$Xtilde, stdmb$Ytilde, lam_mb, beta_start = b0mb, eps = 1e-6)
+  },
+  times = 20L
+)
+print(mb_single); cat("\n")
 
 # Do at least 2 tests for fitLASSOstandardized_seq function below. You are checking output agreements on at least 2 separate inputs
 #################################################
